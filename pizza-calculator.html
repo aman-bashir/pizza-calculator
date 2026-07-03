@@ -331,7 +331,11 @@ function compute(){
   const s=state;
   const yeastPct = yeastPercent(s.temp, s.time, s.yeast);
   const totalDough = s.pizzas*s.weight;
-  const denom = 1 + s.hyd/100 + s.salt/100 + s.oil/100 + s.sugar/100 + yeastPct/100;
+  // Flour is back-solved from the structural ingredients only (hydration, salt,
+  // oil, sugar). Yeast is a tiny pinch computed as a % of flour and is NOT part
+  // of the back-solve, so room temperature / fermentation time / yeast type move
+  // the yeast amount ONLY and never perturb flour/water/salt/oil/sugar.
+  const denom = 1 + s.hyd/100 + s.salt/100 + s.oil/100 + s.sugar/100;
   const flour = totalDough/denom;
   return {
     yeastPct, totalDough, flour,
