@@ -267,15 +267,25 @@ const STYLES = {
   "Custom":                null
 };
 
-/* Yeast-type multipliers relative to Instant Dry Yeast */
-const YEAST_MULT = { idy:1, ady:1.25, fresh:3.0 };
+/* Yeast model (baker's %).
+   Fresh-yeast baker's % = 1.26 * roomFactor[T] * (hours/24)^(-1.45)
+   where roomFactor is a per-degree table and T is room temperature in °C.
+   Other yeast types are derived from the fresh value:
+     fresh = base,  instant dry = fresh/3,  active dry = fresh/2.4            */
+const ROOM_FACTOR = {
+  14:0.33, 15:0.3,   16:0.245, 17:0.205, 18:0.17,  19:0.14,  20:0.113,
+  21:0.1,  22:0.08,  23:0.0683,24:0.0538,25:0.0472,26:0.0389,27:0.0309,
+  28:0.0264,29:0.0218,30:0.019, 31:0.0147,32:0.012, 33:0.0098,34:0.008,
+  35:0.007, 36:0.0061,37:0.005, 38:0.004, 39:0.00315,40:0.00265
+};
+const YEAST_DIV   = { fresh:1, idy:3, ady:2.4 };
 const YEAST_LABEL = { idy:"Instant dry yeast", ady:"Active dry yeast", fresh:"Fresh yeast" };
 
-/* Yeast model (Instant Dry Yeast, baker's %):
-   Calibrated against the live tool: exponential decay with room temp,
-   inverse-proportional to fermentation time.
-   IDY% = A * e^(-k*T) * (Tref / hours)                                        */
-const A = 5.53, K = 0.188, TREF = 12.25;
+function yeastPercent(tempC, hours, type){
+  const T = Math.min(40, Math.max(14, Math.round(tempC)));
+  const freshPct = 1.26 * ROOM_FACTOR[T] * Math.pow(hours/24, -1.45);
+  return freshPct / YEAST_DIV[type];
+}
 
 const $ = id => document.getElementById(id);
 const state = {
@@ -319,7 +329,7 @@ function gram(x){
 /* --- core math (baker's percentages) --- */
 function compute(){
   const s=state;
-  const yeastPct = A*Math.exp(-K*s.temp)*(TREF/s.time)*YEAST_MULT[s.yeast];
+  const yeastPct = yeastPercent(s.temp, s.time, s.yeast);
   const totalDough = s.pizzas*s.weight;
   const denom = 1 + s.hyd/100 + s.salt/100 + s.oil/100 + s.sugar/100 + yeastPct/100;
   const flour = totalDough/denom;
